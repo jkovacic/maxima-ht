@@ -1,0 +1,234 @@
+/*
+Copyright 2013, Jernej Kovacic
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/**
+ * @file
+ * @author Jernej Kovacic
+ *
+ * Collection of some basic unit tests for the Maxima package "homogouneous_transformation"
+ */
+
+/* Load the package: */
+load("homogenous_transformation.mac")$
+
+
+
+/*
+ *****************************************************************
+  Display rotation matrices around axes:
+ *****************************************************************
+ */
+
+/*
+                              +                                +
+                              | 1      0            0        0 |
+                              |                                |
+                              | 0  cos(alpha)   -sin(alpha)  0 |
+              Rot(x, alpha) = |                                |
+                              | 0  sin(alpha)   cos(alpha)   0 |
+                              |                                |
+                              | 0      0            0        1 |
+                              +                                +
+
+*/
+'Rot(x, alpha) = Rotx(alpha);
+
+/*
+                               +                              +
+                               |  cos(beta)   0  sin(beta)  0 |
+                               |                              |
+                               |      0       1      0      0 |
+                Rot(y, beta) = |                              |
+                               | -sin(beta)   0  cos(beta)  0 |
+                               |                              |
+                               |      0       0      0      1 |
+                               +                              +
+
+*/
+'Rot(y, beta) = Roty(beta);
+
+/*
+                              +                                +
+                              | cos(gamma)  -sin(gamma)   0  0 |
+                              |                                |
+                              | sin(gamma)   cos(gamma)   0  0 |
+              Rot(z, gamma) = |                                |
+                              |     0            0        1  0 |
+                              |                                |
+                              |     0            0        0  1 |
+                              +                                +
+
+*/
+'Rot(z, gamma) = Rotz(gamma);
+
+
+
+
+/*
+ **********************************************************
+  Translation along a vector:
+ **********************************************************
+ */
+
+/*
+                                         +            +
+                                         | 1  0  0  a |
+                                         |            |
+                                         | 0  1  0  b |
+                        Trans(a, b, c) = |            |
+                                         | 0  0  1  c |
+                                         |            |
+                                         | 0  0  0  1 |
+                                         +            +
+*/
+'Trans(a, b, c) = Transx(a) . Transz(c) . Transy(b);
+
+
+
+
+/*
+ *******************************************************************
+  Matrices for conversion of cylindrical and spherical coordinates
+ *******************************************************************
+ */
+
+/*
+                                    +                     +
+                                    | 1  0  0  r*cos(phi) |
+                                    |                     |
+                                    | 0  1  0  r*sin(phi) |
+                   Cyl(z, phi, r) = |                     |
+                                    | 0  0  1      z      |
+                                    |                     |
+                                    | 0  0  0      1      |
+                                    +                     +
+ */
+'Cyl(z,phi,r) = Cyl(z, phi, r);
+
+/*
+                                 +                                 +
+                                 | 1  0  0  r*cos(alpha)*sin(beta) |
+                                 |                                 |
+                                 | 0  1  0  r*sin(alpha)*sin(beta) |
+           Sph(alpha, beta, r) = |                                 |
+                                 | 0  0  1       r*cos(beta)       |
+                                 |                                 |
+                                 | 0  0  0            1            |
+                                 +                                 +
+ */
+'Sph(alpha,beta,r) = Sph(alpha, beta, r);
+
+
+
+
+/*
+ ******************************************************************
+  Matrices representing orientation given by Euler and RPY angles
+ ******************************************************************
+ */
+
+/*
+
+  Euler(phi, theta, psi) =
+
+          +                                                                          +
+          | cphi*cpsi-sphi*spsi*cth   -sphi*cpsi*cth-cphi*spsi       sphi*sth      0 |
+          |                                                                          |
+          | cphi*spsi*cth+sphi*cpsi    cphi*cpsi*cth-sphi*spsi      -cphi*sth      0 |
+          |                                                                          |
+          |       spsi*sth                  cpsi*sth                   cth         0 |
+          |                                                                          |
+          |            0                        0                        0         1 |
+          +                                                                          +
+ */
+'Euler(phi, theta, psi) = Euler(phi, theta, psi);
+
+/*
+
+   RPY(phi, theta, psi) =
+
+            +                                                                        +
+            | cphi*cth       cphi*spsi*sth-sphi*cpsi     cphi*cpsi*sth+sphi*spsi   0 |
+            |                                                                        |
+            | sphi*cth       sphi*spsi*sth+cphi*cpsi     sphi*cpsi*sth-cphi*spsi   0 |
+            |                                                                        |
+            |   -sth                 spsi*cth                   cpsi*cth           0 |
+            |                                                                        |
+            |    0                       0                          0              1 |
+            +                                                                        +
+ */
+'RPY(phi, theta, psi) = RPY(phi, theta, psi);
+
+
+
+
+/*
+ ***********************************************************************
+ Compose a transformation and transform some points
+ ***********************************************************************
+ */
+H:Translation(4,0,0) . Roty(%pi/2) . Rotz(%pi/2)$
+
+'H = H;
+
+/* Must return 'true' */
+Is_HT_matrix(H);
+
+P:matrix([1,-1,-1,1,1,-1], [0,0,0,0,4,4], [0,0,2,2,0,0])$
+
+'P = P;
+
+/*
+                              +                        +
+                              | 4   4    6   6  4   4  |
+                              |                        |
+                       H(P) = | 1  - 1  - 1  1  1  - 1 |
+                              |                        |
+                              | 0   0    0   0  4   4  |
+                              +                        +
+ */
+'H('P) = Transform(H, P);
+
+/*
+         +   +
+         | 4 |
+         | 1 |
+         | 4 |
+         +   +
+ */
+'H(transpose([1,4,0])) = Transform_coordinates(H, 1, 4, 0);
+
+H;
+
+H[1,2]: 0.5$
+
+print("H modified to: ", H)$
+
+/* Must return 'false' */
+Is_HT_matrix(H);
+
+/*
+                           +                                                                            +
+                           | cos(theta)  -cos(alpha)*sin(theta)    sin(alpha)*sin(theta)   a*cos(theta) |
+                           |                                                                            |
+                           | sin(theta)   cos(alpha)*cos(theta)   -sin(alpha)*cos(theta)   a*sin(theta) |
+  DH(theta, d, a, alpha) = |                                                                            |
+                           |     0             sin(alpha)               cos(alpha)              d       |
+                           |                                                                            |
+                           |     0                  0                        0                  1       |
+                           +                                                                            +
+ */
+'DH(theta,d,a,alpha) = DH_matrix(theta, d, a, alpha);

@@ -1,0 +1,350 @@
+/*
+Copyright 2013, Jernej Kovacic
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/**
+ * @file
+ * @author Jernej Kovacic
+ *
+ * A package with 3D homogenous transformation functions that
+ * operate with 4x4 transformation matrices.
+ */
+
+/*
+    TODO: numerical comparison of float values
+    TODO: Euler, RPY et al. angles from an arbitrary orientation matrix
+*/
+
+/**
+ * Is H a regular homogenous transforamtion matrix?
+ *
+ * The following conditions are checked:
+ * - H is a square 4x4 matrix
+ * - matrix's scale (H[4,4]) must be a non-zero value
+ * - the first 3 elements of the 4th row must be zeros
+ * - orientation part R (scaled upper left 3x3 submatrix) must
+ *   be an orthogonal matrix: R * R^T = R^T * R = I
+ *
+ * @param H - matrix to be checked
+ *
+ * @return true/false
+ */
+Is_HT_matrix(H) :=
+block (
+    [dim, scale, R],
+    dim: matrix_size(H),
+    if (not dim[1] = 4) or (not dim[2] = 4) then
+        return(false),
+
+    scale: H[4, 4],
+    if scale = 0 then
+       return(false),
+
+    if (not H[4, 1] = 0) or (not H[4, 2] = 0) or (not H[4, 3] = 0) then
+        return(false),
+
+    R: submatrix(4, H, 4) / scale,
+
+    is(equal( trigsimp(transpose(R).R), ident(3) )) and
+        is(equal(trigsimp(R.transpose(R)), ident(3) ))
+)$
+
+/**
+ * Rotation around an arbitrary non-zero vector.
+ *
+ * For mre details about the matrix, see:
+ * http://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+ *
+ * Rotations around cordinate system axes are derived from this function.
+ *
+ * @param rx - x component of the vector
+ * @param ry - y component of the vector
+ * @param rz - z component of the vector
+ * @param theta - rotation angle around the vector
+ *
+ * @return homogenous rotation matrix
+ *
+ * @throw an error if r is a zero vector (rx=ry=rz=0)
+ */
+Rot(rx, ry, rz, theta) :=
+block (
+    [u, ux, uy, uz, cth, c1, sth],
+    cth: cos(theta),
+    sth: sin(theta),
+    c1: 1-cth,
+    u: sqrt(rx^2 + ry^2 + rz^2),
+    if u = 0 then
+        error("A non-zero vector is required."),
+    ux: rx/u,
+    uy: ry/u,
+    uz: rz/u,
+
+    matrix([cth+ux^2*c1, ux*uy*c1-uz*sth, ux*uz*c1+uy*sth, 0],
+           [uy*ux*c1+uz*sth, cth+uy^2*c1, uy*uz*c1-ux*sth, 0],
+           [uz*ux*c1-uy*sth, uz*uy*c1+ux*sth, cth+uz^2*c1 , 0],
+           [0, 0, 0, 1])
+)$
+
+/**
+ * Rotation around an arbitrary non-zero vector.
+ *
+ * For more details about the matrix, see:
+ * http://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+ *
+ * @param v - a vector (a 3x1 matrix) representing the axis of rotation
+ * @param theta - angle of rotation
+ *
+ * @return homogenous rotation matrix
+ *
+ * @throw an error if v's dimension is invalid or if it is a zero vector
+ */
+Rot_vector(v, theta) :=
+block (
+    [dim],
+    dim: matrix_size(v),
+    if (not dim[1] = 3) or (dim[2] = 1) then
+        error("Vector must be a 3x1 matrix."),
+
+    Rot(v[1,1], v[2,1], v[3,1], theta)
+)$
+
+/**
+ * Rotation around the x-axis
+ *
+ * @param alpha - angle of rotation
+ *
+ * @return homogenous rotation matrix
+ */
+Rotx(alpha) :=
+    Rot(1, 0, 0, alpha)$
+
+/**
+ * Rotation around the y-axis
+ *
+ * @param beta - angle of rotation
+ *
+ * @return homogenous rotation matrix
+ */
+Roty(beta) :=
+    Rot(0, 1, 0, beta)$
+
+/**
+ * Rotation around the z-axis
+ *
+ * @param gamma - angle of rotation
+ *
+ * @return homogenous rotation matrix
+ */
+Rotz(gamma) :=
+    Rot(0, 0, 1, gamma)$
+
+/**
+ * Translation along a vector, specified by coordinates
+ *
+ * @param a - vector's x coordinate
+ * @param b - vector's y coordinate
+ * @param c - vector's z coordinate
+ *
+ * @return homogenous translation matrix
+ */
+Translation(a, b, c) :=
+    matrix( [1, 0, 0, a],
+            [0, 1, 0, b],
+            [0, 0, 1, c],
+            [0, 0, 0, 1] )$
+
+/**
+ * Translation along a vector
+ *
+ * @param t - vector (a 3x1 matrix) of translation
+ *
+ * @return homogenous translation matrix
+ *
+ * @throw an error if v's dimension is invalid
+ */
+Translation_vector(t) :=
+block (
+    [dim],
+    dim: matrix_size(t),
+    if (not dim[1]=3) or (not dim[2]=1) then
+        error("Vector must be a 3x1 matrix."),
+
+    Translation(t[1,1], t[2,1], t[3,1])
+)$
+
+/**
+ * Translation along the x-axis
+ *
+ * @param a - translation along the x axis
+ *
+ * @return homogenous translation matrix
+ */
+Transx(a) :=
+    Translation(a, 0, 0)$
+
+ /**
+ * Translation along the y-axis
+ *
+ * @param b - translation along the y axis
+ *
+ * @return homogenous translation matrix
+ */
+Transy(b) :=
+    Translation(0, b, 0)$
+
+/**
+ * Translation along the z-axis
+ *
+ * @param c - translation along the z axis
+ *
+ * @return homogenous translation matrix
+ */
+Transz(c) :=
+    Translation(0, 0, c)$
+
+/**
+ * Orientation given by Euler's angles
+ *
+ * Euler's orientation is defined as:
+ *     Euler(phi, theta, psi) = Rotz(phi) . Rotx(theta) . Rotz(psi)
+ *
+ * @param phi - Euler's angle phi around the z axis
+ * @param theta - Euler's angle theta around the x axis
+ * @param psi - Euler's angle psi around the z axis
+ *
+ * @return matrix representing orientation specified by Euler's angles
+ */
+Euler(phi, theta, psi) :=
+    Rotz(phi) . Rotx(theta) . Rotz(psi)$
+
+/**
+ * Orientation given by Roll - Pitch - Yaw (RPY) angles
+ *
+ * RPY orientation is defined as:
+ *     RPY(phi, theta, psi) = Rotz(phi) . Roty(theta) . Rotx(psi)
+ *
+ * @param phi - RPY angle phi around the z axis
+ * @param theta - RPY angle theta around the y axis
+ * @param psi - RPY angle psi around the x axis
+ *
+ * @return matrix representing orientation specified by RPY angles
+ */
+RPY(phi, theta, psi) :=
+    Rotz(phi) . Roty(theta) . Rotx(psi)$
+
+/**
+ * Translation specified by cylindrical coordinates.
+ * The transformation preserves orientation.
+ *
+ * @param z - translation along the z axis
+ * @param phi - rotation around the z axis
+ * @param r - translation along the x axis
+ *
+ * @return matrix representing translation specified by cylindrical coordinates
+ */
+Cyl(z, phi, r) :=
+    trigsimp( Transz(z) . Rotz(phi) . Transx(r) . Rotz(-phi) )$
+
+/**
+ * Translation specified by spherical coordinates.
+ * The transformation preserves orientation.
+ *
+ * @param alpha - rotation around the z axis
+ * @param beta - rotation around the y axis
+ * @param r - translation along the z axis
+ *
+ * @return matrix representing translation specified by spherical coordinates
+ */
+Sph( alpha, beta, r) :=
+    trigsimp( Rotz(alpha) . Roty(beta) . Transz(r) . Roty(-beta) . Rotz(-alpha) )$
+
+/**
+ * Denavit - Hartenberg tansformation
+ *
+ * Denavit - Hartenberg transformation is defined as:
+ *     Rotz(theta) . Transz(d) . Transx(a) . Rotx(alpha)
+ *
+ * For more information, see
+ * http://en.wikipedia.org/wiki/Denavit%E2%80%93Hartenberg_parameters
+ *
+ * @param theta - rotation around the z axis
+ * @param d - translation along the z axis
+ * @param a - translation along the x axis
+ * @param alpha - rotation around the x axis
+ *
+ * @return matrix representing Denavit - Hartenberg transformation
+ */
+DH_matrix(theta, d, a, alpha) :=
+    Rotz(theta) . Transz(d) . Transx(a) . Rotx(alpha)$
+
+/**
+ * Transformation of points as defined by the transformation matrix
+ *
+ * @param H - a 4x4 transformation matrix
+ * @param P - a 3xN matrix of N points, represented as column vectors
+ *
+ * @return a 3xN matrix of transformed points
+ *
+ * @throw an error if H's or P's dimension is invalid
+ */
+Transform(H, P) :=
+block (
+    [N, c, dim, T],
+
+    dim: matrix_size(H),
+    if (not dim[1] = 4) or (not dim[2] = 4) then
+        error("Transformation must be a 4x4 matrix."),
+
+    dim: matrix_size(P),
+    if (not dim[1] = 3) then
+        error("Points must be packed into a 3xN matrix."),
+
+    N: dim[2],
+
+    T: addrow(P, makelist(1, N)),
+
+    T: H . T,
+
+    for c from 1 thru N do block (
+        [r],
+        if T[4, c] = 0 then
+            error("Scale must not be zero."),
+
+        for r from 1 thru 3 do
+            T[r,c]: T[r,c] / T[4,c]
+     ),
+
+    submatrix(4, T)
+)$
+
+/**
+ * Transformation of a point as defined by the transformation matrix
+ *
+ * @param H - a 4x4 transformation matrix
+ * @param x - point's x coordinate
+ * @param y - point's y coordinate
+ * @param z - point's z coordinate
+ *
+ * @return a 3x1 matrix with coordinates of the transformed point
+ *
+ * @throw an error if H's dimension is invalid
+ */
+Transform_coordinates(H, x, y, z) :=
+block (
+    [m],
+    m: matrix([x], [y], [z]),
+
+    Transform(H, m)
+)$

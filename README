@@ -1,0 +1,16 @@
+A Maxima package with some common 3D homogenous transformation functionality
+(e.g. rotations, translations, etc.). 
+
+The actual package is the file "homogenous_transformation.mac".
+Additionally, a simple unit test and demo batch script "ht_test.mac"
+is included. To execute it, enter the following statement in Maxima:
+  batch("ht_test.mac")$
+
+For more information, see Doxygen style comments in the package file
+"homogenous_transformation.mac".
+
+The package is licenced under the Apache 2.0 license. See LICENSE.txt and
+http://www.apache.org/licenses/LICENSE-2.0
+for more details.
+
+The author of the package is Jernej Kovacic (jkovacic AT gmail DOT com).
